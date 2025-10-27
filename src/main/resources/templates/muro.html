@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Muro</title>
+</head>
+<body>
+<h1>Muro</h1>
+<p th:if="${email != null}">Autenticado como: <strong th:text="${email}"></strong></p>
+<p th:if="${email == null}">No se pudo obtener el email del usuario.</p>
+
+<section>
+    <h2>Crear post</h2>
+    <input type="text" id="content" placeholder="¿Qué estás pensando?" maxlength="280" style="width: 320px;" />
+    <button id="btnPostear">Postear</button>
+</section>
+
+<hr/>
+
+<section>
+    <h2>Feed</h2>
+    <button id="btnCargar">Cargar últimos</button>
+    <ul id="feed"></ul>
+</section>
+
+<script>
+    const TOKEN = /*[[${token}]]*/ '';
+    const BASE = globalThis.location.origin;
+
+    async function crearPost() {
+        const content = document.getElementById('content').value.trim();
+        if (!content) { alert('Escribe algo'); return; }
+        const res = await fetch(`${BASE}/api/posts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content })
+        });
+        if (!res.ok) {
+            const txt = await res.text();
+            alert('Error creando post: ' + res.status + ' - ' + txt);
+            return;
+        }
+        document.getElementById('content').value = '';
+        await cargarFeed();
+    }
+
+    async function cargarFeed() {
+        const res = await fetch(`${BASE}/api/posts?page=0&size=20`, {
+            headers: {}
+        });
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        if (!res.ok) {
+            const txt = await res.text();
+            feed.innerHTML = `<li>Error cargando feed: ${res.status} - ${txt}</li>`;
+            return;
+        }
+        const page = await res.json();
+        for (const p of (page.content || [])) {
+            const li = document.createElement('li');
+            li.textContent = `${p.id} | ${p.authorId} : ${p.content}`;
+            feed.appendChild(li);
+        }
+    }
+
+    document.getElementById('btnPostear').addEventListener('click', crearPost);
+    document.getElementById('btnCargar').addEventListener('click', cargarFeed);
+
+    // Carga inicial del feed
+    cargarFeed();
+</script>
+</body>
+</html>

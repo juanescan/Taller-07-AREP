@@ -7,7 +7,9 @@ import eci.arep.twitter.service.PostService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,8 +27,9 @@ public class PostController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Post create(@Validated @RequestBody CreatePostRequest req,
-                       @AuthenticationPrincipal Jwt jwt) {
-        String authorId = extractAuthorId(jwt);
+                       @AuthenticationPrincipal Object principal,
+                       Authentication authentication) {
+        String authorId = extractAuthorId(principal, authentication);
         return service.create(req.getContent(), authorId, req.getParentPostId());
     }
 
@@ -51,15 +54,18 @@ public class PostController {
     @PutMapping("/{id}")
     public Post update(@PathVariable String id,
                        @Validated @RequestBody UpdatePostRequest req,
-                       @AuthenticationPrincipal Jwt jwt) {
-        String authorId = extractAuthorId(jwt);
+                       @AuthenticationPrincipal Object principal,
+                       Authentication authentication) {
+        String authorId = extractAuthorId(principal, authentication);
         return service.update(id, req.getContent(), authorId);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
-        String authorId = extractAuthorId(jwt);
+    public void delete(@PathVariable String id,
+                       @AuthenticationPrincipal Object principal,
+                       Authentication authentication) {
+        String authorId = extractAuthorId(principal, authentication);
         service.delete(id, authorId);
     }
 
@@ -67,21 +73,47 @@ public class PostController {
     @ResponseStatus(HttpStatus.CREATED)
     public Post replyTo(@PathVariable String id,
                         @Validated @RequestBody UpdatePostRequest req,
-                        @AuthenticationPrincipal Jwt jwt) {
+                        @AuthenticationPrincipal Object principal,
+                        Authentication authentication) {
         // Reusamos UpdatePostRequest solo con content
-        String authorId = extractAuthorId(jwt);
+        String authorId = extractAuthorId(principal, authentication);
         // Validar existencia del padre dentro del servicio
         return service.create(req.getContent(), authorId, id);
     }
 
-    private String extractAuthorId(Jwt jwt) {
-        if (jwt == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token requerido");
-        String email = jwt.getClaimAsString("email");
-        if (email != null && !email.isBlank()) return email;
-        String username = jwt.getClaimAsString("cognito:username");
-        if (username != null && !username.isBlank()) return username;
-        String sub = jwt.getSubject();
-        if (sub != null && !sub.isBlank()) return sub;
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No se pudo determinar el usuario del token");
+    private String extractAuthorId(Object principal, Authentication authentication) {
+        String email = tryEmailFromJwt(principal);
+        if (email != null) return email;
+        email = tryEmailFromOidcUser(principal);
+        if (email != null) return email;
+        if (authentication != null) {
+            email = tryEmailFromOidcUser(authentication.getPrincipal());
+            if (email != null) return email;
+        }
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No se pudo determinar el usuario autenticado");
+    }
+
+    private String tryEmailFromJwt(Object principal) {
+        if (principal instanceof Jwt jwt) {
+            String email = jwt.getClaimAsString("email");
+            if (email != null && !email.isBlank()) return email;
+            String username = jwt.getClaimAsString("cognito:username");
+            if (username != null && !username.isBlank()) return username;
+            String sub = jwt.getSubject();
+            if (sub != null && !sub.isBlank()) return sub;
+        }
+        return null;
+    }
+
+    private String tryEmailFromOidcUser(Object principal) {
+        if (principal instanceof OidcUser oidcUser) {
+            String email = oidcUser.getEmail();
+            if (email != null && !email.isBlank()) return email;
+            Object username = oidcUser.getClaims().get("cognito:username");
+            if (username instanceof String s && !s.isBlank()) return s;
+            String sub = oidcUser.getSubject();
+            if (sub != null && !sub.isBlank()) return sub;
+        }
+        return null;
     }
 }

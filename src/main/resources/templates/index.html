@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AWS Cognito Demo App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .container {
+            max-width: 600px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>AWS Cognito Demo App</h1>
+
+    <!-- Usuario autenticado -->
+    <div sec:authorize="isAuthenticated()">
+        <p>Hello, <strong th:text="${#authentication.name}"></strong>!</p>
+
+        <p>OIDC Principal (todos los datos disponibles):</p>
+        <pre th:text="${#authentication.getPrincipal()}"></pre>
+
+        <a th:href="@{/logout}"><button>Log out</button></a>
+    </div>
+
+    <!-- Usuario anónimo -->
+    <div sec:authorize="isAnonymous()">
+        <p>You are not logged in.</p>
+        <a th:href="@{/oauth2/authorization/cognito}"><button>Log in with Cognito</button></a>
+    </div>
+</div>
+</body>
+</html>

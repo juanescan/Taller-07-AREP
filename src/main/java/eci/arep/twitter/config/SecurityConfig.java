@@ -14,8 +14,16 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().authenticated()
+                .requestMatchers("/", "/index", "/login", "/oauth2/**", "/webjars/**", "/css/**", "/js/**", "/images/**").permitAll()
+                .requestMatchers("/muro").authenticated()
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll()
             )
+            // Login con OAuth2 (Cognito) y redirección al muro luego de autenticarse
+            .oauth2Login(oauth2 -> oauth2
+                .defaultSuccessUrl("/muro", true)
+            )
+            // Mantener soporte para JWT en /api/** (por Postman u otros clientes)
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
     }
