@@ -39,6 +39,15 @@ public class PostController {
         return service.listAll(page, size);
     }
 
+    @GetMapping("/mine")
+    public Page<Post> listMine(@RequestParam(defaultValue = "0") int page,
+                               @RequestParam(defaultValue = "20") int size,
+                               @AuthenticationPrincipal Object principal,
+                               Authentication authentication) {
+        String authorId = extractAuthorId(principal, authentication);
+        return service.listMine(authorId, page, size);
+    }
+
     @GetMapping("/{id}")
     public Post getOne(@PathVariable String id) {
         return service.getOne(id);

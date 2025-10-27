@@ -8,6 +8,7 @@
 <h1>Muro</h1>
 <p th:if="${email != null}">Autenticado como: <strong th:text="${email}"></strong></p>
 <p th:if="${email == null}">No se pudo obtener el email del usuario.</p>
+<span id="meEmail" th:text="${email}" style="display:none"></span>
 
 <section>
     <h2>Crear post</h2>
@@ -23,9 +24,17 @@
     <ul id="feed"></ul>
 </section>
 
+<hr/>
+
+<section>
+    <h2>Mis posts</h2>
+    <button id="btnCargarMis">Cargar mis posts</button>
+    <ul id="myPosts"></ul>
+</section>
+
 <script>
-    const TOKEN = /*[[${token}]]*/ '';
     const BASE = globalThis.location.origin;
+    const EMAIL = (document.getElementById('meEmail')?.textContent || '').trim();
 
     async function crearPost() {
         const content = document.getElementById('content').value.trim();
@@ -43,13 +52,11 @@
             return;
         }
         document.getElementById('content').value = '';
-        await cargarFeed();
+        await Promise.all([cargarFeed(), cargarMisPosts()]);
     }
 
     async function cargarFeed() {
-        const res = await fetch(`${BASE}/api/posts?page=0&size=20`, {
-            headers: {}
-        });
+        const res = await fetch(`${BASE}/api/posts?page=0&size=20`);
         const feed = document.getElementById('feed');
         feed.innerHTML = '';
         if (!res.ok) {
@@ -58,18 +65,202 @@
             return;
         }
         const page = await res.json();
-        for (const p of (page.content || [])) {
-            const li = document.createElement('li');
-            li.textContent = `${p.id} | ${p.authorId} : ${p.content}`;
-            feed.appendChild(li);
+    for (const p of (page.content || [])) feed.appendChild(createPostItem(p));
+    }
+
+    async function cargarMisPosts() {
+        const res = await fetch(`${BASE}/api/posts/mine?page=0&size=20`);
+        const list = document.getElementById('myPosts');
+        list.innerHTML = '';
+        if (!res.ok) {
+            const txt = await res.text();
+            list.innerHTML = `<li>Error cargando mis posts: ${res.status} - ${txt}</li>`;
+            return;
         }
+        const page = await res.json();
+        for (const p of (page.content || [])) list.appendChild(createPostItem(p, { mine: true }));
+    }
+
+    function createPostItem(p, options = {}) {
+    const isMine = (p.author || '').toLowerCase() === (EMAIL || '').toLowerCase();
+        const li = document.createElement('li');
+        li.style.marginBottom = '8px';
+
+        const header = document.createElement('div');
+    header.textContent = `${p.author} · ${p.id}`;
+        header.style.fontSize = '0.85rem';
+        header.style.color = '#666';
+
+        const contentWrap = document.createElement('div');
+        const contentSpan = document.createElement('span');
+        contentSpan.textContent = p.content;
+        contentWrap.appendChild(contentSpan);
+
+        const actions = document.createElement('div');
+        actions.style.marginTop = '4px';
+
+        // Responder
+        const btnReply = document.createElement('button');
+        btnReply.textContent = 'Responder';
+        btnReply.addEventListener('click', () => showReplyBox());
+        actions.appendChild(btnReply);
+
+        // Ver respuestas
+        const btnToggleReplies = document.createElement('button');
+        btnToggleReplies.textContent = 'Ver respuestas';
+        actions.appendChild(btnToggleReplies);
+
+        const repliesWrap = document.createElement('div');
+        repliesWrap.style.display = 'none';
+        repliesWrap.style.marginTop = '6px';
+        repliesWrap.style.marginLeft = '16px';
+
+        const repliesList = document.createElement('ul');
+        repliesWrap.appendChild(repliesList);
+
+        btnToggleReplies.addEventListener('click', async () => {
+            if (repliesWrap.style.display === 'none') {
+                await loadReplies();
+                repliesWrap.style.display = '';
+                btnToggleReplies.textContent = 'Ocultar respuestas';
+            } else {
+                repliesWrap.style.display = 'none';
+                btnToggleReplies.textContent = 'Ver respuestas';
+            }
+        });
+
+        async function loadReplies() {
+            repliesList.innerHTML = '';
+            const res = await fetch(`${BASE}/api/posts/${p.id}/replies?page=0&size=10`);
+            if (!res.ok) {
+                const txt = await res.text();
+                repliesList.innerHTML = `<li>Error: ${res.status} - ${txt}</li>`;
+                return;
+            }
+            const page = await res.json();
+            for (const r of (page.content || [])) {
+                const ri = document.createElement('li');
+                ri.textContent = `${r.author}: ${r.content}`;
+                repliesList.appendChild(ri);
+            }
+        }
+
+        // Caja de respuesta
+        const replyBox = document.createElement('div');
+        replyBox.style.display = 'none';
+        replyBox.style.marginTop = '6px';
+        const replyInput = document.createElement('input');
+        replyInput.type = 'text';
+        replyInput.placeholder = 'Escribe una respuesta';
+        replyInput.maxLength = 280;
+        replyInput.style.width = '280px';
+        const btnSendReply = document.createElement('button');
+        btnSendReply.textContent = 'Enviar';
+        btnSendReply.addEventListener('click', async () => {
+            const content = replyInput.value.trim();
+            if (!content) return;
+            const res = await fetch(`${BASE}/api/posts/${p.id}/replies`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            if (!res.ok) {
+                const txt = await res.text();
+                alert('Error al responder: ' + res.status + ' - ' + txt);
+                return;
+            }
+            replyInput.value = '';
+            await Promise.all([loadReplies(), cargarMisPosts()]);
+            repliesWrap.style.display = '';
+            btnToggleReplies.textContent = 'Ocultar respuestas';
+        });
+
+        function showReplyBox() {
+            replyBox.style.display = replyBox.style.display === 'none' ? '' : 'none';
+        }
+
+        // Si es mío: editar/eliminar
+        if (isMine || options.mine) {
+            const btnEdit = document.createElement('button');
+            btnEdit.textContent = 'Editar';
+            btnEdit.addEventListener('click', () => startEdit());
+            actions.appendChild(btnEdit);
+
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = 'Eliminar';
+            btnDelete.addEventListener('click', async () => {
+                if (!confirm('¿Eliminar este post? También se borrarán sus respuestas.')) return;
+                const res = await fetch(`${BASE}/api/posts/${p.id}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    alert('Error eliminando: ' + res.status + ' - ' + txt);
+                    return;
+                }
+                await Promise.all([cargarFeed(), cargarMisPosts()]);
+            });
+            actions.appendChild(btnDelete);
+        }
+
+        // Editar inline
+        const editWrap = document.createElement('div');
+        editWrap.style.display = 'none';
+        const editInput = document.createElement('input');
+        editInput.type = 'text';
+        editInput.value = p.content;
+        editInput.maxLength = 280;
+        editInput.style.width = '280px';
+        const btnSave = document.createElement('button');
+        btnSave.textContent = 'Guardar';
+        btnSave.addEventListener('click', async () => {
+            const newContent = editInput.value.trim();
+            if (!newContent) { alert('El contenido no puede quedar vacío'); return; }
+            const res = await fetch(`${BASE}/api/posts/${p.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: newContent })
+            });
+            if (!res.ok) {
+                const txt = await res.text();
+                alert('Error actualizando: ' + res.status + ' - ' + txt);
+                return;
+            }
+            contentSpan.textContent = newContent;
+            toggleEdit(false);
+            await cargarMisPosts();
+        });
+        const btnCancel = document.createElement('button');
+        btnCancel.textContent = 'Cancelar';
+        btnCancel.addEventListener('click', () => toggleEdit(false));
+        editWrap.appendChild(editInput);
+        editWrap.appendChild(btnSave);
+        editWrap.appendChild(btnCancel);
+
+        function startEdit() { toggleEdit(true); }
+        function toggleEdit(on) {
+            editWrap.style.display = on ? '' : 'none';
+            contentWrap.style.display = on ? 'none' : '';
+        }
+
+        // Compose
+        li.appendChild(header);
+        li.appendChild(contentWrap);
+        li.appendChild(actions);
+        li.appendChild(replyBox);
+        li.appendChild(repliesWrap);
+        replyBox.appendChild(replyInput);
+        replyBox.appendChild(btnSendReply);
+        li.appendChild(editWrap);
+
+        return li;
     }
 
     document.getElementById('btnPostear').addEventListener('click', crearPost);
     document.getElementById('btnCargar').addEventListener('click', cargarFeed);
+    document.getElementById('btnCargarMis').addEventListener('click', cargarMisPosts);
 
     // Carga inicial del feed
     cargarFeed();
+    cargarMisPosts();
 </script>
 </body>
 </html>

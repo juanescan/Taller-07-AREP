@@ -39,6 +39,11 @@ public class PostService {
         return repository.findAll(pageable);
     }
 
+    public Page<Post> listMine(String authorId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "_id"));
+        return repository.findByAuthor(authorId, pageable);
+    }
+
     public Post getOne(String id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Post no encontrado"));
