@@ -1,53 +1,167 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-      lang="en">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AWS Cognito Demo App</title>
+
+    <!-- Fuente Victor Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Victor+Mono:ital,wght@0,100..700;1,100..700&display=swap"
+        rel="stylesheet">
+
     <style>
+        /* --- Estilo minimalista y coherente con el 'Muro' --- */
+        :root {
+            --bg: #1C1919;
+            --panel: #000000;
+            --border: #2e2e2e;
+            --text: #ffffff;
+        }
+
+        html,
         body {
-            font-family: Arial, sans-serif;
-            margin: 2rem;
+            height: 100%;
         }
-        h1 {
-            color: #2c3e50;
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Victor Mono', monospace;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        button {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            cursor: pointer;
-        }
+
         .container {
-            max-width: 600px;
+            background-color: var(--panel);
+            padding: 2rem 2.5rem;
+            border: 1px solid var(--border);
+            max-width: 720px;
+            width: 100%;
+            text-align: left;
+            box-sizing: border-box;
         }
+
+        h1 {
+            font-size: 1.8rem;
+            margin: 0 0 1rem 0;
+            color: var(--text);
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        p {
+            margin: 0 0 1rem 0;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        strong {
+            color: var(--text);
+            font-weight: 700;
+        }
+
         pre {
-            background: #f4f4f4;
+            background: #111010;
+            color: var(--text);
             padding: 1rem;
-            overflow-x: auto;
+            border: 1px solid var(--border);
+            text-align: left;
+            max-height: 320px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            font-family: 'Victor Mono', monospace;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        /* Botones minimalistas */
+        .btn {
+            display: inline-block;
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--text);
+            padding: 0.6rem 1.15rem;
+            font-family: 'Victor Mono', monospace;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.08s ease;
+            margin-top: 0.6rem;
+        }
+
+        .btn:hover {
+            background: var(--text);
+            color: var(--bg);
+            transform: translateY(-1px);
+        }
+
+        /* enlaces que contienen botones */
+        a .btn {
+            display: inline-block;
+        }
+
+        /* responsive */
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+                padding-bottom: 0.4rem;
+            }
+        }
+
+        /* scroll minimalista */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
+
 <body>
-<div class="container">
-    <h1>AWS Cognito Demo App</h1>
+    <div class="container">
+        <h1>AWS Cognito Demo App</h1>
 
-    <!-- Usuario autenticado -->
-    <div sec:authorize="isAuthenticated()">
-        <p>Hello, <strong th:text="${#authentication.name}"></strong>!</p>
+        <!-- Usuario autenticado -->
+        <div sec:authorize="isAuthenticated()">
+            <p>Hello, <strong th:text="${#authentication.name}"></strong>!</p>
 
-        <p>OIDC Principal (todos los datos disponibles):</p>
-        <pre th:text="${#authentication.getPrincipal()}"></pre>
+            <p>OIDC Principal (todos los datos disponibles):</p>
+            <pre th:text="${#authentication.getPrincipal()}"></pre>
 
-        <a th:href="@{/logout}"><button>Log out</button></a>
+            <a th:href="@{/logout}"><span class="btn">Log out</span></a>
+        </div>
+
+        <!-- Usuario anónimo -->
+        <div sec:authorize="isAnonymous()">
+            <p>You are not logged in.</p>
+            <a th:href="@{/oauth2/authorization/cognito}"><span class="btn">Log in with Cognito</span></a>
+        </div>
     </div>
-
-    <!-- Usuario anónimo -->
-    <div sec:authorize="isAnonymous()">
-        <p>You are not logged in.</p>
-        <a th:href="@{/oauth2/authorization/cognito}"><button>Log in with Cognito</button></a>
-    </div>
-</div>
 </body>
+
 </html>

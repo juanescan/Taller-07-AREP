@@ -3,34 +3,186 @@
 <head>
     <meta charset="UTF-8" />
     <title>Muro</title>
+
+    <!-- Fuente Victor Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Victor+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #1C1919;
+            --panel: #000000;
+            --border: #2e2e2e;
+            --text: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Victor Mono', monospace;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            max-width: 800px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1, h2 {
+            color: var(--text);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.4rem;
+            margin-bottom: 1.2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            margin-top: 2rem;
+        }
+
+        p {
+            color: var(--text);
+            margin: 0.6rem 0 1rem 0;
+        }
+
+        strong {
+            font-weight: 700;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            max-width: 500px;
+            background: #111010;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Victor Mono', monospace;
+            padding: 0.6rem;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        input[type="text"]::placeholder {
+            color: #777;
+        }
+
+        button {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--text);
+            font-family: 'Victor Mono', monospace;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            margin-top: 0.6rem;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.08s ease;
+        }
+
+        button:hover {
+            background: var(--text);
+            color: var(--bg);
+            transform: translateY(-1px);
+        }
+
+        section {
+            margin-bottom: 2rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0 0 0;
+        }
+
+        li {
+            background: #111010;
+            border: 1px solid var(--border);
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+
+        li div {
+            margin-bottom: 0.3rem;
+        }
+
+        /* Ajuste de scroll minimalista */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            input[type="text"] {
+                max-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-<h1>Muro</h1>
-<p th:if="${email != null}">Autenticado como: <strong th:text="${email}"></strong></p>
-<p th:if="${email == null}">No se pudo obtener el email del usuario.</p>
-<span id="meEmail" th:text="${email}" style="display:none"></span>
+<div class="container">
+    <h1>Muro</h1>
 
-<section>
-    <h2>Crear post</h2>
-    <input type="text" id="content" placeholder="¿Qué estás pensando?" maxlength="280" style="width: 320px;" />
-    <button id="btnPostear">Postear</button>
-</section>
+    <p th:if="${email != null}">Autenticado como: <strong th:text="${email}"></strong></p>
+    <p th:if="${email == null}">No se pudo obtener el email del usuario.</p>
+    <span id="meEmail" th:text="${email}" style="display:none"></span>
 
-<hr/>
+    <section>
+        <h2>Crear post</h2>
+        <input type="text" id="content" placeholder="¿Qué estás pensando?" maxlength="280" />
+        <button id="btnPostear">Postear</button>
+    </section>
 
-<section>
-    <h2>Feed</h2>
-    <button id="btnCargar">Cargar últimos</button>
-    <ul id="feed"></ul>
-</section>
+    <hr/>
 
-<hr/>
+    <section>
+        <h2>Feed</h2>
+        <button id="btnCargar">Cargar últimos</button>
+        <ul id="feed"></ul>
+    </section>
 
-<section>
-    <h2>Mis posts</h2>
-    <button id="btnCargarMis">Cargar mis posts</button>
-    <ul id="myPosts"></ul>
-</section>
+    <hr/>
+
+    <section>
+        <h2>Mis posts</h2>
+        <button id="btnCargarMis">Cargar mis posts</button>
+        <ul id="myPosts"></ul>
+    </section>
+</div>
 
 <script>
     const BASE = globalThis.location.origin;
@@ -41,9 +193,7 @@
         if (!content) { alert('Escribe algo'); return; }
         const res = await fetch(`${BASE}/api/posts`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content })
         });
         if (!res.ok) {
@@ -65,7 +215,7 @@
             return;
         }
         const page = await res.json();
-    for (const p of (page.content || [])) feed.appendChild(createPostItem(p));
+        for (const p of (page.content || [])) feed.appendChild(createPostItem(p));
     }
 
     async function cargarMisPosts() {
@@ -82,30 +232,29 @@
     }
 
     function createPostItem(p, options = {}) {
-    const isMine = (p.author || '').toLowerCase() === (EMAIL || '').toLowerCase();
+        const isMine = (p.author || '').toLowerCase() === (EMAIL || '').toLowerCase();
         const li = document.createElement('li');
-        li.style.marginBottom = '8px';
 
         const header = document.createElement('div');
-    header.textContent = `${p.author} · ${p.id}`;
+        header.textContent = `${p.author} · ${p.id}`;
         header.style.fontSize = '0.85rem';
-        header.style.color = '#666';
+        header.style.color = '#999';
+        li.appendChild(header);
 
         const contentWrap = document.createElement('div');
         const contentSpan = document.createElement('span');
         contentSpan.textContent = p.content;
         contentWrap.appendChild(contentSpan);
+        li.appendChild(contentWrap);
 
         const actions = document.createElement('div');
-        actions.style.marginTop = '4px';
+        actions.style.marginTop = '6px';
 
-        // Responder
         const btnReply = document.createElement('button');
         btnReply.textContent = 'Responder';
         btnReply.addEventListener('click', () => showReplyBox());
         actions.appendChild(btnReply);
 
-        // Ver respuestas
         const btnToggleReplies = document.createElement('button');
         btnToggleReplies.textContent = 'Ver respuestas';
         actions.appendChild(btnToggleReplies);
@@ -114,7 +263,6 @@
         repliesWrap.style.display = 'none';
         repliesWrap.style.marginTop = '6px';
         repliesWrap.style.marginLeft = '16px';
-
         const repliesList = document.createElement('ul');
         repliesWrap.appendChild(repliesList);
 
@@ -145,7 +293,6 @@
             }
         }
 
-        // Caja de respuesta
         const replyBox = document.createElement('div');
         replyBox.style.display = 'none';
         replyBox.style.marginTop = '6px';
@@ -179,7 +326,6 @@
             replyBox.style.display = replyBox.style.display === 'none' ? '' : 'none';
         }
 
-        // Si es mío: editar/eliminar
         if (isMine || options.mine) {
             const btnEdit = document.createElement('button');
             btnEdit.textContent = 'Editar';
@@ -201,7 +347,6 @@
             actions.appendChild(btnDelete);
         }
 
-        // Editar inline
         const editWrap = document.createElement('div');
         editWrap.style.display = 'none';
         const editInput = document.createElement('input');
@@ -241,14 +386,11 @@
             contentWrap.style.display = on ? 'none' : '';
         }
 
-        // Compose
-        li.appendChild(header);
-        li.appendChild(contentWrap);
         li.appendChild(actions);
         li.appendChild(replyBox);
-        li.appendChild(repliesWrap);
         replyBox.appendChild(replyInput);
         replyBox.appendChild(btnSendReply);
+        li.appendChild(repliesWrap);
         li.appendChild(editWrap);
 
         return li;
@@ -258,7 +400,6 @@
     document.getElementById('btnCargar').addEventListener('click', cargarFeed);
     document.getElementById('btnCargarMis').addEventListener('click', cargarMisPosts);
 
-    // Carga inicial del feed
     cargarFeed();
     cargarMisPosts();
 </script>
